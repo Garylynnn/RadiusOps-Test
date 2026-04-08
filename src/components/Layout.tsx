@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Server, ShieldCheck, History, Settings, LogOut, Menu, Sparkles, Send, X } from "lucide-react";
+import { LayoutDashboard, Server, ShieldCheck, ShieldAlert, History, Settings, LogOut, Menu, Sparkles, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +35,7 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "hosts", label: "Host Provisioning", icon: Server },
     { id: "certificates", label: "Certificates", icon: ShieldCheck },
+    { id: "revocation", label: "Revocation", icon: ShieldAlert },
     { id: "audit", label: "Audit Logs", icon: History },
   ];
 

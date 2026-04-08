@@ -22,17 +22,17 @@ async function startServer() {
   });
 
   app.post("/api/hosts", (req, res) => {
-    const { hostname, owner, device_type } = req.body;
+    const { hostname, owner, device_type, certPassword } = req.body;
     const id = uuidv4();
     const createdAt = new Date().toISOString();
     const fqdn = `${hostname}.almaradius.ho`;
     const status = "Draft";
 
     const insertHost = db.prepare(`
-      INSERT INTO hosts (id, hostname, owner, device_type, status, fqdn, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO hosts (id, hostname, owner, device_type, status, fqdn, certPassword, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    insertHost.run(id, hostname, owner, device_type, status, fqdn, createdAt);
+    insertHost.run(id, hostname, owner, device_type, status, fqdn, certPassword || null, createdAt);
 
     const insertLog = db.prepare(`
       INSERT INTO audit_logs (id, timestamp, user, action, hostname, status)

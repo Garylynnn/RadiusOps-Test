@@ -8,6 +8,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./components/Dashboard";
 import HostManagement from "./components/HostManagement";
 import CertificateManagement from "./components/CertificateManagement";
+import RevocationManagement from "./components/RevocationManagement";
 import AuditLogs from "./components/AuditLogs";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -22,6 +23,8 @@ export default function App() {
         return <HostManagement />;
       case "certificates":
         return <CertificateManagement />;
+      case "revocation":
+        return <RevocationManagement />;
       case "audit":
         return <AuditLogs />;
       default:

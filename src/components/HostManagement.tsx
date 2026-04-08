@@ -19,7 +19,8 @@ export default function HostManagement() {
   const [newHost, setNewHost] = useState({
     hostname: "",
     owner: "",
-    device_type: "Laptop"
+    device_type: "Laptop",
+    certPassword: ""
   });
 
   const handleSuggest = async () => {
@@ -66,7 +67,7 @@ export default function HostManagement() {
       if (res.ok) {
         toast.success("Host request created. Pending approval.");
         setIsDialogOpen(false);
-        setNewHost({ hostname: "", owner: "", device_type: "Laptop" });
+        setNewHost({ hostname: "", owner: "", device_type: "Laptop", certPassword: "" });
         fetchHosts();
       }
     } catch (err) {
@@ -191,6 +192,16 @@ export default function HostManagement() {
                     <SelectItem value="iOS">iOS</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="certPassword">Certificate Password (Optional)</Label>
+                <Input 
+                  id="certPassword" 
+                  type="password"
+                  placeholder="Leave blank for no password" 
+                  value={newHost.certPassword}
+                  onChange={(e) => setNewHost({ ...newHost, certPassword: e.target.value })}
+                />
               </div>
             </div>
             <DialogFooter>

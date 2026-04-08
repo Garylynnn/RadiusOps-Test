@@ -14,6 +14,7 @@ db.exec(`
     status TEXT NOT NULL,
     fqdn TEXT NOT NULL,
     certSerial TEXT,
+    certPassword TEXT,
     createdAt TEXT NOT NULL
   );
 
@@ -33,5 +34,12 @@ db.exec(`
     used INTEGER DEFAULT 0
   );
 `);
+
+// Migration: Add certPassword if it doesn't exist
+try {
+  db.prepare("ALTER TABLE hosts ADD COLUMN certPassword TEXT").run();
+} catch (e) {
+  // Column already exists or other error
+}
 
 export default db;
