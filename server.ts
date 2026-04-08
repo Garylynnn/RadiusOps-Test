@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import db from "./src/db.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,148 +15,109 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Mock Database
-  const dbPath = path.join(__dirname, "mock-db.json");
-  if (!fs.existsSync(dbPath)) {
-    fs.writeFileSync(dbPath, JSON.stringify({
-      hosts: [],
-      logs: [],
-      tokens: []
-    }));
-  }
-
-  const getDB = () => JSON.parse(fs.readFileSync(dbPath, "utf-8"));
-  const saveDB = (data: any) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-
   // API Routes
   app.get("/api/hosts", (req, res) => {
-    const db = getDB();
-    res.json(db.hosts);
+    const hosts = db.prepare("SELECT * FROM hosts ORDER BY createdAt DESC").all();
+    res.json(hosts);
   });
 
   app.post("/api/hosts", (req, res) => {
-    const db = getDB();
-    const newHost = {
-      id: uuidv4(),
-      ...req.body,
-      status: "Draft",
-      createdAt: new Date().toISOString(),
-      fqdn: `${req.body.hostname}.almaradius.ho`
-    };
-    db.hosts.push(newHost);
-    
-    db.logs.push({
-      id: uuidv4(),
-      user: "IT Operator",
-      hostname: newHost.hostname,
-      action: "Created",
-      timestamp: new Date().toISOString(),
-      ip: req.ip
-    });
+    const { hostname, owner, device_type } = req.body;
+    const id = uuidv4();
+    const createdAt = new Date().toISOString();
+    const fqdn = `${hostname}.almaradius.ho`;
+    const status = "Draft";
 
-    saveDB(db);
-    res.json(newHost);
+    const insertHost = db.prepare(`
+      INSERT INTO hosts (id, hostname, owner, device_type, status, fqdn, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertHost.run(id, hostname, owner, device_type, status, fqdn, createdAt);
+
+    const insertLog = db.prepare(`
+      INSERT INTO audit_logs (id, timestamp, user, action, hostname, status)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    insertLog.run(uuidv4(), createdAt, "IT Operator", "Created", hostname, status);
+
+    res.json({ id, hostname, owner, device_type, status, fqdn, createdAt });
   });
 
   app.post("/api/hosts/:id/approve", (req, res) => {
-    const db = getDB();
-    const host = db.hosts.find((h: any) => h.id === req.params.id);
+    const host = db.prepare("SELECT * FROM hosts WHERE id = ?").get(req.params.id) as any;
     if (host) {
-      host.status = "Approved";
+      const status = "Approved";
+      db.prepare("UPDATE hosts SET status = ? WHERE id = ?").run(status, req.params.id);
       
-      db.logs.push({
-        id: uuidv4(),
-        user: "IT Auditor",
-        hostname: host.hostname,
-        action: "Approved",
-        timestamp: new Date().toISOString(),
-        ip: req.ip
-      });
+      db.prepare(`
+        INSERT INTO audit_logs (id, timestamp, user, action, hostname, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), new Date().toISOString(), "IT Auditor", "Approved", host.hostname, status);
 
       // Simulate Provisioning
       setTimeout(() => {
-        const currentDB = getDB();
-        const currentHost = currentDB.hosts.find((h: any) => h.id === req.params.id);
-        if (currentHost) {
-          currentHost.status = "Provisioned";
-          currentHost.certSerial = Math.random().toString(36).substring(2, 15).toUpperCase();
-          currentHost.expiryDate = new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString(); // 2 years
-          
-          currentDB.logs.push({
-            id: uuidv4(),
-            user: "System",
-            hostname: currentHost.hostname,
-            action: "Provisioned",
-            timestamp: new Date().toISOString(),
-            ip: "127.0.0.1"
-          });
-          saveDB(currentDB);
-        }
+        const provisionedStatus = "Provisioned";
+        const certSerial = Math.random().toString(36).substring(2, 15).toUpperCase();
+        
+        db.prepare("UPDATE hosts SET status = ?, certSerial = ? WHERE id = ?")
+          .run(provisionedStatus, certSerial, req.params.id);
+        
+        db.prepare(`
+          INSERT INTO audit_logs (id, timestamp, user, action, hostname, status)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(uuidv4(), new Date().toISOString(), "System", "Provisioned", host.hostname, provisionedStatus);
       }, 2000);
 
-      saveDB(db);
-      res.json(host);
+      res.json({ ...host, status });
     } else {
       res.status(404).json({ error: "Host not found" });
     }
   });
 
   app.post("/api/hosts/:id/revoke", (req, res) => {
-    const db = getDB();
-    const host = db.hosts.find((h: any) => h.id === req.params.id);
+    const host = db.prepare("SELECT * FROM hosts WHERE id = ?").get(req.params.id) as any;
     if (host) {
-      host.status = "Revoked";
-      db.logs.push({
-        id: uuidv4(),
-        user: "IT Operator",
-        hostname: host.hostname,
-        action: "Revoked",
-        timestamp: new Date().toISOString(),
-        ip: req.ip
-      });
-      saveDB(db);
-      res.json(host);
+      const status = "Revoked";
+      db.prepare("UPDATE hosts SET status = ? WHERE id = ?").run(status, req.params.id);
+      
+      db.prepare(`
+        INSERT INTO audit_logs (id, timestamp, user, action, hostname, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), new Date().toISOString(), "IT Operator", "Revoked", host.hostname, status);
+
+      res.json({ ...host, status });
     } else {
       res.status(404).json({ error: "Host not found" });
     }
   });
 
   app.get("/api/logs", (req, res) => {
-    const db = getDB();
-    res.json(db.logs);
+    const logs = db.prepare("SELECT * FROM audit_logs ORDER BY timestamp DESC").all();
+    res.json(logs);
   });
 
   app.post("/api/download-token", (req, res) => {
     const { hostname } = req.body;
     const token = uuidv4();
-    const db = getDB();
-    db.tokens.push({
-      token,
-      hostname,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 mins
-      used: false
-    });
-    saveDB(db);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    
+    db.prepare("INSERT INTO tokens (token, hostname, expiresAt) VALUES (?, ?, ?)")
+      .run(token, hostname, expiresAt);
+      
     res.json({ token });
   });
 
   app.get("/api/download/:token", (req, res) => {
-    const db = getDB();
-    const tokenData = db.tokens.find((t: any) => t.token === req.params.token && !t.used && new Date(t.expiresAt) > new Date());
+    const tokenData = db.prepare("SELECT * FROM tokens WHERE token = ? AND used = 0").get(req.params.token) as any;
     
-    if (tokenData) {
-      tokenData.used = true;
-      db.logs.push({
-        id: uuidv4(),
-        user: "Agent",
-        hostname: tokenData.hostname,
-        action: "Downloaded",
-        timestamp: new Date().toISOString(),
-        ip: req.ip
-      });
-      saveDB(db);
+    if (tokenData && new Date(tokenData.expiresAt) > new Date()) {
+      db.prepare("UPDATE tokens SET used = 1 WHERE token = ?").run(req.params.token);
       
-      // Send a mock P12 file
+      db.prepare(`
+        INSERT INTO audit_logs (id, timestamp, user, action, hostname, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), new Date().toISOString(), "Agent", "Downloaded", tokenData.hostname, "Success");
+      
       res.setHeader("Content-Disposition", `attachment; filename=${tokenData.hostname}.p12`);
       res.send(Buffer.from("MOCK_P12_CONTENT"));
     } else {
