@@ -1,0 +1,5 @@
+{
+  "name": "RadiusOps Manager",
+  "description": "Production-grade GUI for FreeIPA host provisioning, certificate lifecycle management, and IT team operations.",
+  "requestFramePermissions": []
+}
