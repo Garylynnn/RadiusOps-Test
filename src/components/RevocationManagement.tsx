@@ -8,19 +8,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export default function RevocationManagement() {
+export default function RevocationManagement({ user }: { user: any }) {
   const [hosts, setHosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
+  const isAdmin = user?.role === "Admin";
+
+  if (!isAdmin) {
+    return (
+      <div className="h-64 flex flex-col items-center justify-center text-[#141414]/40 space-y-2">
+        <ShieldAlert className="w-12 h-12" />
+        <p className="text-sm font-medium">Access Denied: Admin privileges required for CRL management.</p>
+      </div>
+    );
+  }
+
   const fetchHosts = async () => {
     try {
       const res = await fetch("/api/hosts");
       const data = await res.json();
-      // Only show hosts that can be revoked (Provisioned) or are already Revoked
-      const revocableHosts = data.filter((h: any) => h.status === "Provisioned" || h.status === "Revoked");
-      setHosts(revocableHosts);
+      if (Array.isArray(data)) {
+        // Only show hosts that can be revoked (Provisioned) or are already Revoked
+        const revocableHosts = data.filter((h: any) => h.status === "Provisioned" || h.status === "Revoked");
+        setHosts(revocableHosts);
+      }
     } catch (err) {
       toast.error("Failed to fetch hosts for revocation");
     } finally {
@@ -127,15 +140,15 @@ export default function RevocationManagement() {
                   <TableCell className="text-right">
                     {host.status === "Provisioned" ? (
                       <Dialog>
-                        <DialogTrigger asChild>
+                        <DialogTrigger render={
                           <Button 
                             size="sm" 
                             variant="destructive" 
                             className="h-8 gap-2 text-[10px] uppercase font-bold"
-                          >
-                            <ShieldAlert className="w-3 h-3" />
-                            Revoke
-                          </Button>
+                          />
+                        }>
+                          <ShieldAlert className="w-3 h-3" />
+                          Revoke
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Download, ShieldAlert, CheckCircle2, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 
-export default function HostManagement() {
+export default function HostManagement({ user }: { user: any }) {
   const [hosts, setHosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -20,11 +20,15 @@ export default function HostManagement() {
     certPassword: ""
   });
 
+  const isAdmin = user?.role === "Admin";
+
   const fetchHosts = async () => {
     try {
       const res = await fetch("/api/hosts");
       const data = await res.json();
-      setHosts(data);
+      if (Array.isArray(data)) {
+        setHosts(data);
+      }
     } catch (err) {
       toast.error("Failed to fetch hosts");
     } finally {
@@ -219,7 +223,7 @@ export default function HostManagement() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {host.status === "Draft" && (
+                      {host.status === "Draft" && isAdmin && (
                         <Button size="sm" variant="outline" className="h-8 text-[10px] uppercase font-bold" onClick={() => handleApprove(host.id)}>
                           Approve
                         </Button>
@@ -229,9 +233,11 @@ export default function HostManagement() {
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDownload(host.hostname)}>
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleRevoke(host.id)}>
-                            <ShieldAlert className="w-4 h-4" />
-                          </Button>
+                          {isAdmin && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleRevoke(host.id)}>
+                              <ShieldAlert className="w-4 h-4" />
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>

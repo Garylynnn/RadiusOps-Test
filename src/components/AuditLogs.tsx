@@ -12,7 +12,9 @@ export default function AuditLogs() {
     try {
       const res = await fetch("/api/logs");
       const data = await res.json();
-      setLogs(data.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+      if (Array.isArray(data)) {
+        setLogs(data.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+      }
     } catch (err) {
       console.error("Failed to fetch logs", err);
     } finally {

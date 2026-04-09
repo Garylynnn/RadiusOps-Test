@@ -16,9 +16,11 @@ export default function CertificateManagement() {
     try {
       const res = await fetch("/api/hosts");
       const data = await res.json();
-      // Filter only provisioned hosts which have certificates
-      const provisionedCerts = data.filter((h: any) => h.status === "Provisioned" || h.status === "Revoked");
-      setCerts(provisionedCerts);
+      if (Array.isArray(data)) {
+        // Filter only provisioned hosts which have certificates
+        const provisionedCerts = data.filter((h: any) => h.status === "Provisioned" || h.status === "Revoked");
+        setCerts(provisionedCerts);
+      }
     } catch (err) {
       toast.error("Failed to fetch certificates");
     } finally {

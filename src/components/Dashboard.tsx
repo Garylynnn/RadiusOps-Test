@@ -1,88 +1,96 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Server, ShieldCheck, AlertTriangle, Activity } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-const data = [
-  { name: "Mon", enrollments: 4 },
-  { name: "Tue", enrollments: 7 },
-  { name: "Wed", enrollments: 5 },
-  { name: "Thu", enrollments: 12 },
-  { name: "Fri", enrollments: 8 },
-  { name: "Sat", enrollments: 2 },
-  { name: "Sun", enrollments: 1 },
-];
+export default function Dashboard({ user }: { user: any }) {
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    pending: 0,
+    revoked: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-const deviceData = [
-  { name: "Laptop", value: 45 },
-  { name: "Desktop", value: 25 },
-  { name: "Server", value: 30 },
-];
+  const isAdmin = user?.role === "Admin";
 
-const COLORS = ["#141414", "#404040", "#737373"];
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/hosts");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setStats({
+          total: data.length,
+          active: data.filter((h: any) => h.status === "Provisioned").length,
+          pending: data.filter((h: any) => h.status === "Draft" || h.status === "Approved").length,
+          revoked: data.filter((h: any) => h.status === "Revoked").length
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch stats");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-export default function Dashboard() {
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const chartData = [
+    { name: "Active", value: stats.active },
+    { name: "Pending", value: stats.pending },
+    { name: "Revoked", value: stats.revoked },
+  ];
+
+  const COLORS = ["#141414", "#404040", "#737373"];
+
   return (
     <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium text-[#141414]/60 uppercase tracking-wider">System Overview</h2>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Enrolled" value="124" icon={Server} trend="+12% from last month" />
-        <StatCard title="Active Certificates" value="118" icon={ShieldCheck} trend="95.2% health" />
-        <StatCard title="Pending Approval" value="6" icon={Activity} trend="Requires attention" />
-        <StatCard title="Revoked Hosts" value="12" icon={AlertTriangle} trend="3 this week" />
+        <StatCard title="Total Enrolled" value={stats.total} icon={Server} trend="Total hosts in system" />
+        <StatCard title="Active Certificates" value={stats.active} icon={ShieldCheck} trend="Provisioned and valid" />
+        <StatCard title="Pending Approval" value={stats.pending} icon={Activity} trend="Requires attention" />
+        <StatCard title="Revoked Hosts" value={stats.revoked} icon={AlertTriangle} trend="Invalidated access" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Enrollment Trend */}
-        <Card className="lg:col-span-2 border-[#141414]/10 shadow-none">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium font-serif italic">Enrollment Trends</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#141414/10" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#141414/40" }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#141414/40" }} />
-                <Tooltip 
-                  cursor={{ fill: "#141414/5" }}
-                  contentStyle={{ borderRadius: "8px", border: "1px solid rgba(20,20,20,0.1)", boxShadow: "none" }}
-                />
-                <Bar dataKey="enrollments" fill="#141414" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
         {/* Device Distribution */}
-        <Card className="border-[#141414]/10 shadow-none">
+        <Card className="lg:col-span-3 border-[#141414]/10 shadow-none">
           <CardHeader>
-            <CardTitle className="text-sm font-medium font-serif italic">Device Distribution</CardTitle>
+            <CardTitle className="text-sm font-medium font-serif italic">Certificate Status Distribution</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] flex flex-col items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={deviceData}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
+                  innerRadius={80}
+                  outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {deviceData.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex gap-4 mt-4">
-              {deviceData.map((entry, index) => (
+            <div className="flex gap-8 mt-4">
+              {chartData.map((entry, index) => (
                 <div key={entry.name} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
-                  <span className="text-xs text-[#141414]/60">{entry.name}</span>
+                  <span className="text-xs text-[#141414]/60 font-medium uppercase tracking-tight">{entry.name}: {entry.value}</span>
                 </div>
               ))}
             </div>

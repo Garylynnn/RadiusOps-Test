@@ -33,7 +33,21 @@ db.exec(`
     expiresAt TEXT NOT NULL,
     used INTEGER DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL, -- 'Admin' or 'IT'
+    createdAt TEXT NOT NULL
+  );
 `);
+
+// Create default admin if not exists
+const adminExists = db.prepare("SELECT * FROM users WHERE username = 'admin'").get();
+if (!adminExists) {
+  db.prepare("INSERT INTO users (username, password, role, createdAt) VALUES (?, ?, ?, ?)")
+    .run("admin", "password", "Admin", new Date().toISOString());
+}
 
 // Migration: Add certPassword if it doesn't exist
 try {
