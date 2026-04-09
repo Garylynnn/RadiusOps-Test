@@ -1,25 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, History, Sparkles } from "lucide-react";
+import { Loader2, History } from "lucide-react";
 import { format } from "date-fns";
-import { summarizeLogs } from "@/src/services/gemini";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-
-  const handleSummarize = async () => {
-    if (logs.length === 0) return;
-    setIsSummarizing(true);
-    const text = await summarizeLogs(logs);
-    setSummary(text);
-    setIsSummarizing(false);
-  };
 
   const fetchLogs = async () => {
     try {
@@ -46,29 +33,7 @@ export default function AuditLogs() {
           <History className="w-4 h-4" />
           System Audit Trail
         </h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 text-[10px] gap-2 uppercase font-bold border-[#141414]/10"
-          onClick={handleSummarize}
-          disabled={isSummarizing || logs.length === 0}
-        >
-          {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-          AI Summary
-        </Button>
       </div>
-
-      {summary && (
-        <Card className="border-[#141414]/10 bg-[#141414]/5 shadow-none">
-          <CardContent className="p-4 flex gap-3">
-            <Sparkles className="w-5 h-5 text-[#141414]/40 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#141414]/60">AI Insight</p>
-              <p className="text-sm leading-relaxed">{summary}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="border border-[#141414]/10 rounded-lg bg-white overflow-hidden">
         <Table>

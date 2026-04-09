@@ -6,33 +6,19 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Download, ShieldAlert, CheckCircle2, Loader2, Search, Sparkles } from "lucide-react";
+import { Plus, Download, ShieldAlert, CheckCircle2, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { suggestHostname } from "@/src/services/gemini";
 
 export default function HostManagement() {
   const [hosts, setHosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [newHost, setNewHost] = useState({
     hostname: "",
     owner: "",
     device_type: "Laptop",
     certPassword: ""
   });
-
-  const handleSuggest = async () => {
-    if (!newHost.owner) {
-      toast.error("Please enter an owner name first");
-      return;
-    }
-    setIsSuggesting(true);
-    const names = await suggestHostname(newHost.owner, newHost.device_type);
-    setSuggestions(names);
-    setIsSuggesting(false);
-  };
 
   const fetchHosts = async () => {
     try {
@@ -133,38 +119,13 @@ export default function HostManagement() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="hostname">Hostname</Label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 text-[10px] gap-1 text-[#141414]/60 hover:text-[#141414]"
-                    onClick={handleSuggest}
-                    disabled={isSuggesting}
-                  >
-                    {isSuggesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                    AI Suggest
-                  </Button>
-                </div>
+                <Label htmlFor="hostname">Hostname</Label>
                 <Input 
                   id="hostname" 
                   placeholder="e.g. laptop-01" 
                   value={newHost.hostname}
                   onChange={(e) => setNewHost({ ...newHost, hostname: e.target.value })}
                 />
-                {suggestions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {suggestions.map((name) => (
-                      <button
-                        key={name}
-                        onClick={() => setNewHost({ ...newHost, hostname: name })}
-                        className="text-[10px] bg-[#141414]/5 hover:bg-[#141414]/10 px-2 py-1 rounded border border-[#141414]/10 transition-colors"
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="owner">Owner (Employee Name)</Label>
